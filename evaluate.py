@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from rag import build_index, download_papers, load_and_chunk_papers, retrieve
 
+# 현용찬: 평가표의 RAG 품질 검증을 위해 질문별 정답 청크를 직접 등록한다.
+# 청크 크기나 임베딩 모델을 바꾸면 이 정답 ID도 다시 확인해야 한다.
 EVAL_SET = [
     {
         "id": "mla-core-mechanism",
@@ -76,6 +78,8 @@ def evaluate_retriever(eval_set: list[dict], k: int = 5) -> dict:
     details = []
 
     for item in eval_set:
+        # 현용찬: 상위 k개만 바로 평가하지 않고 후보를 10개까지 가져온 뒤
+        # lexical rerank를 적용해 임베딩 검색과 재정렬 결과를 함께 검증한다.
         results = retrieve(
             item["question"],
             item["technology"],
@@ -108,11 +112,17 @@ def evaluate_retriever(eval_set: list[dict], k: int = 5) -> dict:
             reciprocal_ranks.append(1 / rank)
         else:
             reciprocal_ranks.append(0)
+
+        # 현용찬: 평균 점수만으로는 실패한 질문을 확인하기 어려워
+        # rank와 검색된 청크 목록을 질문별로 남긴다.
         details.append({
             "id": item.get("id"),
+            "technology": item.get("technology"),
             "rank": rank,
-            "matched_chunk_id": results[rank - 1]["chunk_id"] if rank else None,
-            "retrieved_chunk_ids": [result["chunk_id"] for result in results],
+            "matched_chunk_id": results[rank - 1].get("chunk_id") if rank else None,
+            "retrieved_chunk_ids": [
+                result.get("chunk_id") for result in results if result.get("chunk_id")
+            ],
         })
 
     return {
@@ -125,6 +135,8 @@ def evaluate_retriever(eval_set: list[dict], k: int = 5) -> dict:
 
 
 if __name__ == "__main__":
+    # 현용찬: 평가 실행마다 문서와 색인을 다시 준비해 청킹·임베딩 설정이
+    # 바뀐 뒤에도 오래된 색인으로 잘못 평가하지 않도록 한다.
     download_papers()
     chunks = load_and_chunk_papers()
     collection = build_index(chunks)

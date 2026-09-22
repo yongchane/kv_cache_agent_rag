@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 
-from config import AGENT_RAG_TOP_K, FAST_MODE
+from config import AGENT_RAG_TOP_K
 from evidence import compact_evidence, rag_evidence
 from llm import ask_json
 from state import AgentState
@@ -28,10 +28,10 @@ def domain_evaluation_agent(state: AgentState) -> dict:
     try:
         evidence = []
         for technology in ["DeepSeek-V2 MLA", "ITME"]:
-            criteria_queries = DOMAIN_CRITERIA
-            if FAST_MODE:
-                criteria_queries = ["; ".join(DOMAIN_CRITERIA)]
-            for criterion in criteria_queries:
+            # 현용찬: FAST_MODE에서도 도메인 평가 기준을 하나의 질의로
+            # 합치지 않고 기준별로 검색한다. 그래야 HBM, 지연, 처리량 등
+            # 각 기준의 근거와 누락 여부를 따로 확인할 수 있다.
+            for criterion in DOMAIN_CRITERIA:
                 query = f"{technology} impact on {criterion} in datacenter cloud LLM serving"
                 evidence.extend(rag_evidence(query, technology, agent_name, top_k=AGENT_RAG_TOP_K))
 
@@ -40,6 +40,7 @@ def domain_evaluation_agent(state: AgentState) -> dict:
 기준: {json.dumps(DOMAIN_CRITERIA, ensure_ascii=False)}
 각 기준마다 두 기술의 기대효과, 제약, 근거 evidence_id, 비교 조건(실험 또는 적용 조건)을 표시하세요.
 직접 비교가 어려우면 조건 차이 자체를 평가 결과로 남기고, 근거가 없으면 공개 정보 부족이라고 표시하세요.
+근거의 technology 정보를 확인하여 MLA와 ITME의 사실·수치·한계를 서로 섞지 마세요.
 마지막에 경쟁 관계와 보완 가능성을 구분하세요. JSON으로 반환하세요.
 
 근거:
