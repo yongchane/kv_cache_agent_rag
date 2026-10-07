@@ -18,6 +18,7 @@ def main():
     parser.add_argument("--scenario", choices=["normal", "retry", "exhaust"], default="normal")
     parser.add_argument("--task-count", type=int, choices=[1, 2], default=2)
     parser.add_argument("--langsmith", action="store_true", help="원격 trace 전송·서버에서 run 존재 확인")
+    parser.add_argument("--request", default=None, help="실제 팀 Graph에 전달할 조사 요청")
     args = parser.parse_args()
     from dotenv import load_dotenv
     load_dotenv(ROOT / ".env", override=False)
@@ -50,10 +51,12 @@ def main():
     if Path.cwd().resolve() != ROOT:
         parser.error("실제 실행은 프로젝트 루트에서 진행하세요.")
     from app import run_pipeline, save_outputs
-    result = run_pipeline()
+    result = run_pipeline(args.request)
     save_outputs(result)
     print("Trace manifest:", result["runtime_metadata"]["trace_manifest"])
-    return 2 if args.langsmith and not result["runtime_metadata"]["langsmith_verified"] else 0
+    if args.langsmith and not result["runtime_metadata"]["langsmith_verified"]:
+        return 2
+    return 0 if result.get("status") == "success" else 1
 
 
 if __name__ == "__main__":

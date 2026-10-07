@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
@@ -22,16 +23,32 @@ def control_summary(value) -> dict:
     if not isinstance(value, dict):
         return {}
     summary = {}
-    for key in ("task_id", "view", "attempt", "status", "retry_count", "validation_result", "next_action"):
+    for key in ("task_id", "view", "attempt", "status", "retry_count", "validation_result", "next_action", "trace_id", "step_count", "max_steps", "plan_reason"):
         if key in value and isinstance(value[key], (str, int, bool)):
             summary[key] = value[key]
-    for key in ("tasks", "plan", "worker_results", "results", "references", "errors", "gaps"):
+    for key in ("tasks", "plan", "worker_results", "task_results", "decision_log", "results", "references", "errors", "gaps"):
         if isinstance(value.get(key), list):
             summary[key + "_count"] = len(value[key])
     if isinstance(value.get("tasks"), list):
         summary["task_ids"] = [str(t.get("task_id", "unknown"))[:100] for t in value["tasks"][:50] if isinstance(t, dict)]
     if isinstance(value.get("task"), dict):
         summary["task"] = control_summary(value["task"])
+    if isinstance(value.get("current_task"), dict):
+        summary["current_task"] = control_summary(value["current_task"])
+    if isinstance(value.get("plan"), list):
+        summary["plan"] = [control_summary(item) for item in value["plan"][:50]]
+    if isinstance(value.get("task_results"), list):
+        summary["task_outcomes"] = [control_summary(item) for item in value["task_results"][:50]]
+    if isinstance(value.get("retry_targets"), list):
+        summary["retry_targets"] = value["retry_targets"][:50]
+    quality = value.get("quality_evaluation")
+    if isinstance(quality, dict):
+        summary["quality_evaluation"] = {key: quality[key] for key in
+            ("result", "criteria", "issues", "retry_targets", "retry_phase") if key in quality}
+    if isinstance(value.get("decision_log"), list):
+        summary["decisions"] = [{key: item[key] for key in
+            ("ts", "node", "type", "task_id", "task_ids", "retry_targets", "criteria", "issues") if key in item}
+            for item in value["decision_log"][-50:] if isinstance(item, dict)]
     if isinstance(value.get("worker_results"), list):
         summary["worker_outcomes"] = [control_summary(item) for item in value["worker_results"][:50]]
     for key in ("quality_verdict", "eval_result"):
@@ -85,11 +102,14 @@ class TraceSession:
         self.manifest_path = self.directory / "manifest.json"
         try:
             commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL).strip()
+            dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], text=True, stderr=subprocess.DEVNULL).strip())
         except (OSError, subprocess.CalledProcessError):
             commit = "unknown"
+            dirty = True
         self.manifest = {
             "trace_id": self.trace_id, "langsmith_run_id": self.trace_id,
             "thread_id": self.trace_id, "git_commit": commit, "pattern": pattern,
+            "working_tree_dirty": dirty,
             "fixture": fixture, "status": "prepared", "langsmith_verified": False,
             "started_at": datetime.now(timezone.utc).isoformat(), "events": str(self.events_path),
         }
@@ -105,10 +125,13 @@ class TraceSession:
             self._save()
             raise RuntimeError("LANGSMITH_API_KEY를 로컬 .env에 설정하세요.")
         project = os.getenv("LANGSMITH_PROJECT", "kv-cache-agent-orchestration")
-        client = Client() if remote else None
+        # 원격에도 원문 State·프롬프트 대신 제어 요약만 전송한다.
+        client = Client(hide_inputs=control_summary, hide_outputs=control_summary) if remote else None
         self.manifest.update(status="running", langsmith_requested=remote, langsmith_project=project)
         self._save()
         callback = LocalTraceRecorder(self.events_path, self.trace_id)
+        if isinstance(initial_state, dict) and "trace_id" in initial_state:
+            initial_state = {**initial_state, "trace_id": self.trace_id}
         try:
             with tracing_context(enabled=remote, client=client, project_name=project):
                 result = graph.invoke(initial_state, config={
@@ -129,7 +152,14 @@ class TraceSession:
             if client is not None:
                 try:
                     client.flush()
-                    run = client.read_run(self.run_id)
+                    for attempt in range(3):
+                        try:
+                            run = client.read_run(self.run_id)
+                            break
+                        except Exception:
+                            if attempt == 2:
+                                raise
+                            time.sleep(0.3)
                     self.manifest.update(langsmith_verified=run.id == self.run_id,
                                          langsmith_url=client.get_run_url(run=run))
                 except Exception as error:

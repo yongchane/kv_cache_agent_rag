@@ -160,10 +160,17 @@ def evaluate_domain_task(
 
 
 def domain_evaluation_agent(state: dict) -> dict:
-    """기존 Graph와의 호환 노드. 새 Graph는 evaluate_domain_task를 직접 호출한다."""
+    """팀 Orchestrator current_task와 기존 호출을 모두 지원한다."""
     from config import AGENT_RAG_TOP_K
 
     task = state.get("domain_task")
+    if task is None and state.get("current_task"):
+        current = state["current_task"]
+        task = {key: current[key] for key in (
+            "task_id", "technologies", "criteria", "queries", "feedback", "attempt", "top_k"
+        ) if key in current}
+        task.setdefault("domain", state.get("domain") or "데이터센터·클라우드 LLM 서빙")
+        task.setdefault("top_k", AGENT_RAG_TOP_K)
     if task is None:
         task = {
             "task_id": "domain-legacy", "domain": state.get("domain") or "데이터센터·클라우드 LLM 서빙",
@@ -174,7 +181,8 @@ def domain_evaluation_agent(state: dict) -> dict:
     if result["status"] != "success":
         # 기존 Judge가 부족/실패 결과를 정상으로 통과시키지 않도록 표시한다.
         analysis["parse_error"] = True
-    update = {"domain_analysis": analysis, "references": result["references"]}
+    update = {"domain_analysis": analysis, "references": result["references"],
+              "domain_task_result": result}
     if result["status"] != "success":
         update["errors"] = [f"domain_evaluation: {result['status']} ({result['error'] or '; '.join(result['gaps'])})"]
     return update

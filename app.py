@@ -1,6 +1,7 @@
 """전체 파이프라인 실행 진입점: 색인 -> Graph 실행 -> 보고서 저장."""
 from __future__ import annotations
 
+import argparse
 import json
 import platform
 import re
@@ -20,7 +21,7 @@ from config import (
     PROJECT_DIR,
     TOP_K,
 )
-from graph import build_graph
+from graph import build_graph, initial_state
 from observability import TraceSession
 from rag import build_index, download_papers, load_and_chunk_papers
 from state import AgentState
@@ -58,7 +59,7 @@ def validate_report(report: str, references: list[dict] | None = None) -> None:
             raise ValueError(f"본문에 인용된 Evidence가 REFERENCES에 없습니다: {missing_ids[:10]}")
 
 
-def run_pipeline() -> dict:
+def run_pipeline(input_request: str | None = None) -> dict:
     download_papers()
     chunks = load_and_chunk_papers()
     collection = build_index(chunks)
@@ -68,17 +69,8 @@ def run_pipeline() -> dict:
     graph = build_graph()
     if FAST_MODE:
         print("[WARN] FAST_MODE=True: 제출용 보고서는 FAST_MODE=False로 실행하세요.")
-    initial_state: AgentState = {
-        "input_request": (
-            "DeepSeek-V2 MLA와 ITME를 데이터센터·클라우드 LLM 서빙 환경에서 "
-            "TRL, 시장성, 이해관계자, 도메인 관점으로 중립적으로 비교 평가하라."
-        ),
-        "references": [],
-        "errors": [],
-    }
-    # 현재 main은 고정 Graph다. 팀의 새 Graph가 연결된 뒤 pattern 값을 함께 갱신한다.
-    session = TraceSession(OUTPUT_DIR / "traces", pattern="baseline_static")
-    result = session.invoke(graph, initial_state)
+    session = TraceSession(OUTPUT_DIR / "traces", pattern="orchestrator_workers")
+    result = session.invoke(graph, initial_state(input_request))
     result["runtime_metadata"] = {
         "python": platform.python_version(),
         "platform": platform.platform(),
@@ -90,9 +82,12 @@ def run_pipeline() -> dict:
         "chunk_overlap": CHUNK_OVERLAP,
         "retrieval_top_k": TOP_K,
         "agent_rag_top_k": AGENT_RAG_TOP_K,
-        "trace_id": session.trace_id,
+        "trace_id": result.get("trace_id"),
         "trace_manifest": str(session.manifest_path),
         "langsmith_verified": session.manifest["langsmith_verified"],
+        "status": result.get("status"),
+        "step_count": result.get("step_count"),
+        "quality_evaluation": result.get("quality_evaluation", {}),
     }
 
     print("검증 결과:", result["validation_result"])
@@ -139,5 +134,12 @@ def save_outputs(result: dict) -> dict:
 
 
 if __name__ == "__main__":
-    pipeline_result = run_pipeline()
+    parser = argparse.ArgumentParser(description="KV-cache Agentic RAG 실행")
+    parser.add_argument(
+        "--request",
+        default=None,
+        help="조사 관점이 포함된 요청문. 생략하면 네 관점을 모두 조사합니다.",
+    )
+    args = parser.parse_args()
+    pipeline_result = run_pipeline(args.request)
     save_outputs(pipeline_result)

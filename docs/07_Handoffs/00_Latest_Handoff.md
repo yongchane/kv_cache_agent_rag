@@ -8,6 +8,10 @@ status: planning
 
 # 현재 인수인계
 
+## 최신: 팀 코드 통합 완료
+
+`docs/03_Development/Team_Trace_Integration.md`를 우선 읽는다. 사용자 제공 동적 Orchestrator/State/품질 코드가 현재 브랜치에 통합됐다. 초기 아래 기록의 production graph 미변경 상태는 과거 기록이다. 도메인 current_task adapter와 State/run ID 통일, 팀 필드 추적, 원격 입력·출력 요약, 요청 관점 검증 및 attempt 보완을 적용했다. 실제 API·LangSmith 캡처는 미완료다.
+
 ## 최신 우선 사항 — 도메인·검증·Trace 구현
 
 현재 작업 브랜치는 `feature/hyc-domain-tracing`. 팀 선택은 Orchestrator-Workers이며 아래 초기 Supervisor 제안보다 이 항목을 우선한다. `docs/03_Development/Domain_Tracing_Handoff.md`와 `docs/05_Decisions/Orchestrator_Selection.md`를 먼저 읽는다.

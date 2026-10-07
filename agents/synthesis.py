@@ -62,6 +62,9 @@ def validation_judge(state: AgentState) -> dict:
         "domain_analysis": "domain_evaluation",
         "synthesis": "synthesis",
     }
+    if state.get("required_task_ids"):
+        required = {key: target for key, target in required.items()
+                    if target == "synthesis" or target in state["required_task_ids"]}
 
     for key, target in required.items():
         if not has_usable_analysis(state.get(key)):
@@ -148,6 +151,7 @@ def report_generation_agent(state: AgentState) -> dict:
 - 시장성 절과 이해관계자 절은 수집된 웹 근거를 반영하세요. 웹 근거가 없을 때만 공개 정보 부족이라고 쓰세요.
 - 입력에 없는 수치, 기업 도입 사례, 시장 반응, 운영 결과를 추론해 사실처럼 쓰지 마세요.
 - 직접 근거가 없으면 '공개 정보 부족'이라고 쓰고, 무엇이 부족한지와 판단에 미치는 영향을 설명하세요.
+- '상용화 가능성이 높다', '비용 효율적이다', '효과적이다'처럼 전망이나 우열을 단정하는 표현은 직접 근거가 있을 때만 사용하세요. 직접 근거가 없으면 '공개 정보 부족', '잠정 해석', '추가 검증 필요'로 표현하세요.
 - 두 기술의 실험 환경이 다르면 수치를 직접 우열 비교하지 말고 비교 조건의 차이를 먼저 설명하세요.
 - 특정 기술을 추천하거나 승자를 정하지 말고, 적용 조건에 따른 장점·제약·보완 가능성을 균형 있게 작성하세요.
 
