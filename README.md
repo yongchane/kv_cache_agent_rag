@@ -1,5 +1,7 @@
 # Subject
 
+> 2026-10-07 Multi-Agent Orchestration 과제 준비: [요구사항·설계·팀 분담·제출 안내](docs/00_Start_Here.md). 이 브랜치의 문서는 Supervisor 구현 제안이며, 아래 기존 RAG 구현과 구분합니다.
+
 본 프로젝트는 KV cache 최적화 기술을 소프트웨어, 하드웨어 두 진영에서 선정하여
 시장성·이해관계자·도메인 관점에서 중립적으로 비교 평가하는 Agentic RAG 시스템을
 설계·개발한 프로젝트임.
