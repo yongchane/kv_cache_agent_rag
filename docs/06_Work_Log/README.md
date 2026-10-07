@@ -1,5 +1,15 @@
 # 작업 기록 — 2026-10-07
 
+## 현용찬 역할 구현 후속 기록
+
+- 팀 결정은 Orchestrator-Workers로 확정됐다. 초기 Supervisor 제안은 과거 검토안이며 현재 선택안이 아니다.
+- `feature/hyc-domain-tracing`에서 도메인 Task/Result 계약, feedback·queries 반영, 근거 ID·기술 구분 검증을 구현했다. 팀원 담당 production `graph.py`·`state.py`는 수정하지 않았다.
+- LangSmith 연결, OpenAI 호출 래핑, 실행 UUID·로컬 JSONL·manifest 기록, 서버 수집 확인 기능을 추가했다. 로컬 `.env`는 수정하지 않았다.
+- 신규 unittest 14개 및 기존 smoke 11개 통과. 테스트 전용 그래프에서 실제 LangGraph Send로 1/2개 fan-out, 실패 작업만 재시도, 2회 상한 종료를 검증했다. 이것은 최종 팀 그래프 실증이 아니다.
+- 실제 smoke는 Chroma 인덱스 부재로 처음 실패했다. 기존 원본 논문 2개로 169개 chunk를 인덱싱한 뒤 검색 근거 4건을 확보했으나 OpenAI `AuthenticationError`로 분석 생성이 실패했다. 서비스 성공이나 인증 원인은 확정하지 않았다.
+- LangSmith 키가 없어 원격 trace와 화면 캡처는 미완료다. 로컬 fixture 기록은 제출용 실제 trace를 대체하지 않는다.
+- 재조회한 포크 main은 `8737e47`이다. 팀 코드 기준 `bd9d7de`와 비교해 애플리케이션 변경이 없고 LangSmith 관련 코드도 없다. 이번 구현은 별도 브랜치에만 저장한다.
+
 ## 수행 내용
 
 - 사용자 첨부 실습 지침 전체를 읽고 패턴·필수 구현·State·품질 평가·산출물·배점을 추출했다.

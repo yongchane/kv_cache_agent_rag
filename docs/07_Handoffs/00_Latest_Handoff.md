@@ -8,6 +8,16 @@ status: planning
 
 # 현재 인수인계
 
+## 최신 우선 사항 — 도메인·검증·Trace 구현
+
+현재 작업 브랜치는 `feature/hyc-domain-tracing`. 팀 선택은 Orchestrator-Workers이며 아래 초기 Supervisor 제안보다 이 항목을 우선한다. `docs/03_Development/Domain_Tracing_Handoff.md`와 `docs/05_Decisions/Orchestrator_Selection.md`를 먼저 읽는다.
+
+도메인 worker의 구조화 입력·출력, feedback 검색 반영, 근거 검증 및 LangSmith/로컬 추적 연결 구현을 완료했다. 신규 14개 테스트와 기존 11개 smoke는 통과했다. 동적 fan-out·부분 재시도·종료는 테스트 전용 그래프 검증이며 production graph는 다른 팀원 담당으로 그대로 유지했다.
+
+실제 논문 검색은 근거 4건을 확보했으나 OpenAI AuthenticationError로 분석 생성에 실패했다. LangSmith API 키가 없어 실제 원격 trace/PNG도 미완료다. 키는 대화나 Git에 넣지 않고 로컬에 설정해야 한다. 다음 단계는 팀 State 계약에 adapter 연결, 인증 설정 확인, 통합 코드 실행, 실제 LangSmith 수집 확인 및 캡처다.
+
+최신 포크 원격 main `8737e47`은 확인했으며 애플리케이션 기준은 기존 `bd9d7de`와 같다. main에 이번 코드를 push/merge하지 않는다. 아래는 초기 계획 당시 기록이다.
+
 ## 현재 상태
 
 기준 코드 `bd9d7de`, 작업 브랜치 `agent-orchestration/planning-20261007`. 기존 `hyc`는 원격 최신 `a662e1b`까지 pull했다. 원본 main과 애플리케이션 코드는 이번 작업에서 변경하지 않았다. `docs/`에 과제 분석·설계·협업·제출 준비 문서를 추가했다.

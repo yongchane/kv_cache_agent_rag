@@ -1,5 +1,7 @@
 # Supervisor 아키텍처 제안
 
+> 초기 대안 검토 문서. 이후 팀은 Orchestrator-Workers 강화를 선택했습니다. 최신 근거는 [Orchestrator 선택 문서](../05_Decisions/Orchestrator_Selection.md)를 따릅니다. 이 문서의 Supervisor 제안은 구현하지 않았습니다.
+
 상태: 구현 전 팀 검토안. 기존 4개 관점 Agent를 최대한 재사용하는 설계다.
 
 ## 패턴 선택

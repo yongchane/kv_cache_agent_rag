@@ -21,6 +21,7 @@ from config import (
     TOP_K,
 )
 from graph import build_graph
+from observability import TraceSession
 from rag import build_index, download_papers, load_and_chunk_papers
 from state import AgentState
 
@@ -75,7 +76,9 @@ def run_pipeline() -> dict:
         "references": [],
         "errors": [],
     }
-    result = graph.invoke(initial_state, config={"recursion_limit": 40})
+    # 현재 main은 고정 Graph다. 팀의 새 Graph가 연결된 뒤 pattern 값을 함께 갱신한다.
+    session = TraceSession(OUTPUT_DIR / "traces", pattern="baseline_static")
+    result = session.invoke(graph, initial_state)
     result["runtime_metadata"] = {
         "python": platform.python_version(),
         "platform": platform.platform(),
@@ -87,6 +90,9 @@ def run_pipeline() -> dict:
         "chunk_overlap": CHUNK_OVERLAP,
         "retrieval_top_k": TOP_K,
         "agent_rag_top_k": AGENT_RAG_TOP_K,
+        "trace_id": session.trace_id,
+        "trace_manifest": str(session.manifest_path),
+        "langsmith_verified": session.manifest["langsmith_verified"],
     }
 
     print("검증 결과:", result["validation_result"])
@@ -121,7 +127,15 @@ def save_outputs(result: dict) -> dict:
     print("Markdown:", markdown_path)
     print("HTML:", html_path)
     print("State JSON:", json_path)
-    return {"markdown": markdown_path, "html": html_path, "pdf": pdf_path, "json": json_path}
+    artifacts = {"markdown": markdown_path, "html": html_path, "pdf": pdf_path, "json": json_path}
+    manifest_path = result.get("runtime_metadata", {}).get("trace_manifest")
+    if manifest_path:
+        from pathlib import Path
+        manifest_file = Path(manifest_path)
+        manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
+        manifest["artifacts"] = {key: str(value) for key, value in artifacts.items()}
+        manifest_file.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    return artifacts
 
 
 if __name__ == "__main__":

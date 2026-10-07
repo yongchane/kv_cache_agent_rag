@@ -9,7 +9,8 @@ import ollama
 from dotenv import load_dotenv
 from tavily import TavilyClient
 
-load_dotenv(override=True)
+# 명령행 FAST_MODE/LANGSMITH 설정이 .env 값으로 덮이지 않게 한다.
+load_dotenv(override=False)
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "").strip()
 tavily_client = TavilyClient(api_key=TAVILY_API_KEY) if TAVILY_API_KEY else None
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
@@ -44,6 +45,9 @@ JSON_NUM_PREDICT = 1400 if FAST_MODE else 2200
 REPORT_NUM_PREDICT = 2400 if FAST_MODE else 7000
 
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
+if os.getenv("LANGSMITH_TRACING", "false").lower() in {"true", "1", "yes", "on"}:
+    from langsmith.wrappers import wrap_openai
+    openai_client = wrap_openai(openai_client)
 ollama_client = ollama.Client(host=os.getenv("OLLAMA_HOST", "http://localhost:11434"))
 
 PAPERS = {

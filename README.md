@@ -1,6 +1,29 @@
 # Subject
 
-> 2026-10-07 Multi-Agent Orchestration 과제 준비: [요구사항·설계·팀 분담·제출 안내](docs/00_Start_Here.md). 이 브랜치의 문서는 Supervisor 구현 제안이며, 아래 기존 RAG 구현과 구분합니다.
+> 2026-10-07 팀 선택은 **Orchestrator-Workers 강화**입니다. [선택·강화 이유](docs/05_Decisions/Orchestrator_Selection.md), [현용찬 도메인·Trace 구현과 통합 안내](docs/03_Development/Domain_Tracing_Handoff.md)를 먼저 확인하세요. 현재 production `graph.py`는 기존 고정 흐름이며, 팀 Orchestrator와 품질 평가 변경은 아직 원격에 반영되지 않았습니다.
+
+## 이번 브랜치에서 구현한 도메인·Trace 기능
+
+- `agents/domain_evaluation.py`: `DomainTask`를 받아 기술·기준·추가 질의·재작업 피드백을 반영하는 `evaluate_domain_task`. 성공/근거 부족/오류 구분, 평가 항목 누락·잘못된 기술 근거 검사. 기존 Graph용 노드도 유지.
+- `observability.py`: 실제 Graph callback의 노드 시작/종료/오류·작업 수·시도 횟수·품질 판정을 JSONL에 기록. commit/run_id/산출물을 manifest로 연결. LangSmith 사용 시 서버 run 존재를 별도로 확인.
+- `config.py`: LangSmith 활성화 시 OpenAI SDK wrapper로 LLM 호출 추적. 환경변수 설정을 `.env`가 덮지 않도록 수정.
+- `scripts/trace_run.py`: 키 값 노출 없이 설정 확인, fixture trace, 현재 production Graph 실행.
+- `scripts/domain_smoke.py`: 실제 논문 검색·LLM으로 HBM 기준 한 개만 검증.
+- `tests/fixtures/orchestration.py`: `Send` 동적 분기·선택적 재시도·상한 종료를 검증하는 테스트 전용 Graph. **팀 최종 Graph 또는 제출 보고서가 아님**.
+
+```bash
+source .venv/bin/activate
+python -m unittest discover -s tests -p 'test_*.py' -v
+python tests/test_smoke.py
+python scripts/trace_run.py --check
+python scripts/trace_run.py --fixture --scenario retry
+# 실제 검색 색인·Ollama·OpenAI 설정 필요
+python scripts/domain_smoke.py
+# 실제 LangSmith 키를 .env에 설정한 후 확인용 fixture 실행
+python scripts/trace_run.py --fixture --scenario retry --langsmith
+```
+
+LangSmith 서버 확인이 `False`이면 실제 LangSmith 캡처 완료로 간주하지 않습니다. 최종 캡처는 팀 Orchestrator·품질 평가가 통합된 브랜치의 실제 실행으로 확보해야 합니다.
 
 본 프로젝트는 KV cache 최적화 기술을 소프트웨어, 하드웨어 두 진영에서 선정하여
 시장성·이해관계자·도메인 관점에서 중립적으로 비교 평가하는 Agentic RAG 시스템을

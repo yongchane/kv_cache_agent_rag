@@ -1,5 +1,7 @@
 # Multi-Agent Orchestration 실습 시작 안내
 
+> 팀 결정 갱신: **Orchestrator-Workers 강화**. 아래 Supervisor 추천은 초기 검토안입니다. 최신 [선택 근거](05_Decisions/Orchestrator_Selection.md)와 [도메인·Trace 작업 결과](03_Development/Domain_Tracing_Handoff.md)를 우선합니다.
+
 기준일: 2026-10-07. 코드 분석 기준: 팀 원본 `upstream/main`의 `bd9d7de`. 이번 브랜치는 분석·설계·팀 작업 준비용이며, 아래 Supervisor 구조는 구현 예정인 제안이다.
 
 ## 먼저 볼 문서
